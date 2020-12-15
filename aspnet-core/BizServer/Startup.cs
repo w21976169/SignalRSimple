@@ -28,6 +28,20 @@ namespace BizServer
             services.AddControllers();
 
             services.AddSwaggerGen();
+
+            services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(builder =>
+                {
+                    builder
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .SetIsOriginAllowed(_ => true)
+                        .AllowCredentials();
+                });
+            });
+
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -51,7 +65,13 @@ namespace BizServer
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseCors();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapHub<MessageHub>("/hub/message");
+            });
         }
     }
 }

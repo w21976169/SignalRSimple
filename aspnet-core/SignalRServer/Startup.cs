@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BizServer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -28,6 +29,20 @@ namespace SignalRServer
             services.AddControllers();
 
             services.AddSwaggerGen();
+
+            services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(builder =>
+                {
+                    builder
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .SetIsOriginAllowed(_ => true)
+                        .AllowCredentials();
+                });
+            });
+
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,7 +54,7 @@ namespace SignalRServer
             }
 
             app.UseHttpsRedirection();
-            
+
             app.UseSwagger();
 
             app.UseSwaggerUI(c =>
@@ -51,9 +66,13 @@ namespace SignalRServer
 
             app.UseAuthorization();
 
+            app.UseCors();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                
+                endpoints.MapHub<MessageHub>("/hub/message");
             });
         }
     }
