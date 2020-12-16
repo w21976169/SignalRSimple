@@ -17,6 +17,10 @@ export default {
 		this.$socket.start({
 			log: false // Active only in development for debugging.
 		})
+
+		this.$socket.on('onclose', () => {
+			console.log(11111111111111)
+		})
 	},
 	sockets: {
 		ReceiveMessage(data) {
