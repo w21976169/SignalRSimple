@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using BizServer;
 using Microsoft.AspNetCore.Builder;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace SignalRServer
 {
@@ -42,7 +44,34 @@ namespace SignalRServer
                 });
             });
 
-            services.AddSignalR();
+            services.AddSignalR()
+                .AddStackExchangeRedis(o =>
+                {
+                    o.ConnectionFactory = async writer =>
+                    {
+                        var config = new ConfigurationOptions
+                        {
+                            AbortOnConnectFail = false,
+                            ChannelPrefix = "__signalr_",
+                        };
+                        config.DefaultDatabase = 0;
+                        var connection = await ConnectionMultiplexer.ConnectAsync(
+                            "81.70.44.26:6379,password=123456,ssl=false,abortConnect=true,connectTimeout=5000",
+                            writer);
+                        connection.ConnectionFailed += (_, e) => { Console.WriteLine("Connection to Redis failed."); };
+
+                        if (connection.IsConnected)
+                        {
+                            Console.WriteLine("connected to Redis.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Did not connect to Redis");
+                        }
+
+                        return connection;
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

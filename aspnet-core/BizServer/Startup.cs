@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace BizServer
 {
@@ -41,7 +42,34 @@ namespace BizServer
                 });
             });
 
-            services.AddSignalR();
+            services.AddSignalR()
+                .AddStackExchangeRedis(o =>
+                {
+                    o.ConnectionFactory = async writer =>
+                    {
+                        var config = new ConfigurationOptions
+                        {
+                            AbortOnConnectFail = false,
+                            ChannelPrefix = "__biz_",
+                        };
+                        config.DefaultDatabase = 0;
+                        var connection = await ConnectionMultiplexer.ConnectAsync(
+                            "81.70.44.26:6379,password=123456,ssl=false,abortConnect=true,connectTimeout=5000",
+                            writer);
+                        connection.ConnectionFailed += (_, e) => { Console.WriteLine("Connection to Redis failed."); };
+
+                        if (connection.IsConnected)
+                        {
+                            Console.WriteLine("connected to Redis.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Did not connect to Redis");
+                        }
+
+                        return connection;
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -56,10 +84,7 @@ namespace BizServer
 
             app.UseSwagger();
 
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "API V1");
-            });
+            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "API V1"); });
 
             app.UseRouting();
 
@@ -70,7 +95,7 @@ namespace BizServer
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<MessageHub>("/hub/message");
+                // endpoints.MapHub<MessageHub>("/hub/message");
             });
         }
     }

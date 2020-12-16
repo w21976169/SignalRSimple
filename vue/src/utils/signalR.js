@@ -12,41 +12,29 @@ class SocketConnection extends EventEmitter {
 
 		this.connection = connection
 		this.listened = []
-		this.socket = false
 
 		this.toSend = []
 
 		this.offline = false
+
+		this.socket = new SignalR.HubConnectionBuilder()
+			.configureLogging(SignalR.LogLevel.Information)
+			.withUrl(this.connection)
+			.build()
+
+		this.socket.onclose(async () => {
+			this.emit('onclose')
+			await this._initialize()
+		})
 	}
 
-	async _initialize(connection = '') {
-		const con = connection || this.connection
-
+	async _initialize() {
 		try {
-			const socket = new SignalR.HubConnectionBuilder()
-				.withUrl(con)
-				.withAutomaticReconnect()
-				.build()
-
-			socket.connection.onclose = async () => {
-				if (this.options.log) console.log('Reconnecting...')
-
-				this.socket = false
-				/* eslint-disable no-underscore-dangle */
-				await this._initialize(con)
-				this.emit('reconnect')
-			}
-
-			await socket.start()
-
-			this.socket = socket
+			await this.socket.start()
 			this.emit('init')
 		} catch (error) {
-			console.error(error)
-			if (this.options.log) console.log('Error, reconnecting...')
-
-			setTimeout(() => {
-				this._initialize(con)
+			setTimeout(async () => {
+				await this._initialize()
 			}, 5000)
 		}
 	}
